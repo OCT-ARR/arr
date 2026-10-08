@@ -1,0 +1,59 @@
+{
+  "gpt_4o": {
+    "name": "gpt_4o",
+    "provider": "openai_compatible_chat",
+    "model": "gpt-4o",
+    "api_key_env": "OPENAI_API_KEY",
+    "timeout_sec": 180,
+    "base_url_env": "OPENAI_BASE_URL"
+  },
+  "claude_haiku_4_5": {
+    "name": "claude_haiku_4_5",
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5-20251001",
+    "api_key_env": "ANTHROPIC_API_KEY",
+    "timeout_sec": 180,
+    "base_url_env": "ANTHROPIC_BASE_URL"
+  },
+  "gemini_2_5_flash_lite": {
+    "name": "gemini_2_5_flash_lite",
+    "provider": "gemini",
+    "model": "gemini-2.5-flash-lite",
+    "api_key_env": "GEMINI_API_KEY",
+    "timeout_sec": 180,
+    "base_url_env": "GEMINI_BASE_URL"
+  },
+  "glm_4_1v_thinking_flashx": {
+    "name": "glm_4_1v_thinking_flashx",
+    "provider": "openai_compatible_chat",
+    "model": "glm-4.1v-thinking-flashx",
+    "api_key_env": "COMPAT_API_KEY",
+    "base_url_env": "COMPAT_BASE_URL",
+    "generation": {
+      "max_tokens": 256
+    },
+    "timeout_sec": 180
+  },
+  "doubao_1_6_vision": {
+    "name": "doubao_1_6_vision",
+    "provider": "openai_compatible_chat",
+    "model": "doubao-seed-1-6-vision-250815",
+    "api_key_env": "COMPAT_API_KEY",
+    "base_url_env": "COMPAT_BASE_URL",
+    "generation": {
+      "max_tokens": 256
+    },
+    "timeout_sec": 240
+  },
+  "kimi_k2_5": {
+    "name": "kimi_k2_5",
+    "provider": "openai_compatible_chat",
+    "model": "kimi-k2.5",
+    "api_key_env": "COMPAT_API_KEY",
+    "base_url_env": "COMPAT_BASE_URL",
+    "generation": {
+      "max_tokens": 256
+    },
+    "timeout_sec": 240
+  }
+}

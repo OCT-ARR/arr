@@ -1,0 +1,18 @@
+{
+  "mesc": {
+    "path": "data/MESC-FT/test.jsonl",
+    "description": "MESC-FT test set with 450 samples and keyframes under keyframes/."
+  },
+  "meld_esc300": {
+    "path": "data/MELD-ESC300/test.jsonl",
+    "description": "MELD-ESC300 generalization test set with 300 samples and frames under data/MELD-ESC300/frames/."
+  },
+  "stickerconv": {
+    "path": "data/StickerConv/test.jsonl",
+    "description": "StickerConv external split; 300 included examples using official textual sticker cues."
+  },
+  "avamerg": {
+    "path": "data/AvaMERG/test.jsonl",
+    "description": "AvaMERG external split; 300 included examples with five local frame paths each."
+  }
+}

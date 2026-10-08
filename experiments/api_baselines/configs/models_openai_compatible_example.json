@@ -1,0 +1,26 @@
+{
+  "gpt_4o_compat": {
+    "name": "gpt_4o_compat",
+    "provider": "openai_compatible_chat",
+    "model": "gpt-4o",
+    "api_key_env": "COMPAT_API_KEY",
+    "base_url_env": "COMPAT_BASE_URL",
+    "timeout_sec": 180
+  },
+  "claude_haiku_4_5_compat": {
+    "name": "claude_haiku_4_5_compat",
+    "provider": "openai_compatible_chat",
+    "model": "claude-haiku-4-5-20251001",
+    "api_key_env": "COMPAT_API_KEY",
+    "base_url_env": "COMPAT_BASE_URL",
+    "timeout_sec": 180
+  },
+  "gemini_2_5_flash_lite_compat": {
+    "name": "gemini_2_5_flash_lite_compat",
+    "provider": "openai_compatible_chat",
+    "model": "gemini-2.5-flash-lite",
+    "api_key_env": "COMPAT_API_KEY",
+    "base_url_env": "COMPAT_BASE_URL",
+    "timeout_sec": 180
+  }
+}

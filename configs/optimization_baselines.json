@@ -1,0 +1,54 @@
+{
+  "paper_scope": {
+    "table_7_methods": ["dpo", "simpo", "rloo"],
+    "optional_non_table_7_method": "ppo",
+    "construction_note": "Protocol implementations use the paper's shared backbone, SFT initialization, prompts, reward signals, and evaluation settings; algorithm-specific defaults are configurable below."
+  },
+  "max_sequence_length": 1024,
+  "preference_min_gap": 0.0,
+  "preference_resample_rounds": 3,
+  "shared": {
+    "base_model_path": "checkpoints/sft_merged",
+    "reward_model_path": "models/Qwen3-VL-8B-Instruct",
+    "visual_model_path": "models/clip-vit-large-patch14",
+    "emotion_model_path": "models/paraphrase-multilingual-MiniLM-L12-v2",
+    "train_file": "data/MESC-FT/train.jsonl",
+    "val_file": "data/MESC-FT/val.jsonl",
+    "policy_device": "cuda:0",
+    "reward_device": "cuda:1",
+    "visual_device": "cuda:1",
+    "emotion_device": "cuda:1",
+    "seed": 42,
+    "batch_size": 32,
+    "group_size": 4,
+    "epochs": 3,
+    "learning_rate": 0.00001,
+    "weight_decay": 0.0,
+    "warmup_ratio": 0.05,
+    "kl_beta": 0.001,
+    "temperature": 1.3,
+    "top_p": 0.95,
+    "max_new_tokens": 192,
+    "reward_temperature": 0.0,
+    "reward_max_new_tokens": 512,
+    "max_image_size": 384,
+    "max_frames": 16,
+    "lora_rank": 8,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "max_grad_norm": 1.0
+  },
+  "methods": {
+    "dpo": {"beta": 0.1},
+    "simpo": {"beta": 2.0, "gamma": 1.0},
+    "rloo": {"updates_per_rollout": 1},
+    "ppo": {
+      "clip_epsilon": 0.2,
+      "value_clip_epsilon": 0.2,
+      "value_loss_coefficient": 0.5,
+      "gae_gamma": 1.0,
+      "gae_lambda": 0.95,
+      "updates_per_rollout": 4
+    }
+  }
+}

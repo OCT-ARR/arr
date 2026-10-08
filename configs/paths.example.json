@@ -1,0 +1,34 @@
+{
+  "data_root": "data",
+  "datasets": {
+    "mesc_ft_train": "data/MESC-FT/train.jsonl",
+    "mesc_ft_val": "data/MESC-FT/val.jsonl",
+    "mesc_ft_test": "data/MESC-FT/test.jsonl",
+    "meld_esc300_test": "data/MELD-ESC300/test.jsonl",
+    "stickerconv_test": "data/StickerConv/test.jsonl",
+    "avamerg_test": "data/AvaMERG/test.jsonl"
+  },
+  "keyframe_root": "keyframes",
+  "meld_frame_root": "data/MELD-ESC300/frames",
+  "avamerg_frame_root": "data/AvaMERG/frames",
+  "checkpoints": {
+    "sft_lora": "checkpoints/sft_lora",
+    "sft_merged": "checkpoints/sft_merged",
+    "warmup_merged": "checkpoints/warmup_merged",
+    "faces_main": "checkpoints/faces_main",
+    "grpo_baseline": "checkpoints/grpo_baseline",
+    "reward_model": "checkpoints/reward_model/roberta_epitome_multitask/final",
+    "credit_linear": "checkpoints/token_credit/linear/merged_model",
+    "credit_exponential": "checkpoints/token_credit/exponential/merged_model"
+  },
+  "external_models": {
+    "base_model": "model/qwen/Qwen2___5-VL-7B-Instruct",
+    "critic_model": "models/Qwen3-VL-8B-Instruct",
+    "judge_model": "models/judge-32b",
+    "visual_encoder": "models/clip-vit-large-patch14",
+    "emotion_encoder": "models/paraphrase-multilingual-MiniLM-L12-v2"
+  },
+  "reward_model_data": {
+    "epitome_reddit": "data/EPITOME-Reddit"
+  }
+}

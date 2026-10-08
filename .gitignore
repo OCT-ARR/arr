@@ -1,0 +1,89 @@
+# Python / runtime cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Local environments and secrets
+.venv/
+venv/
+.env
+*.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Model checkpoints and learned weights
+checkpoints/
+model/
+models/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.onnx
+*.h5
+*.msgpack
+*.ckpt
+
+# Raw multimedia assets
+raw/
+clips/
+keyframes/
+videos/
+raw_videos/
+external_datasets/
+data/MELD-ESC300/frames/
+data/MELD-ESC300/metadata.csv
+*.jpg
+*.jpeg
+*.mp4
+*.avi
+*.mov
+
+# Generated outputs and paper result caches
+outputs/
+**/outputs/
+**/outputs_emotyda/
+**/cache/
+**/logs/
+experiments/human_preference/annotations/
+experiments/human_preference/results/
+**/*_summary.json
+**/*metrics*.json
+**/*metrics*.csv
+**/bootstrap_results.csv
+**/score.txt
+**/score_every_dimension.txt
+*.log
+*.xlsx
+
+# OS / editor files
+.DS_Store
+.vscode/
+.idea/
+
+# Supplementary experiment runtime artifacts
+**/results/
+**/merged_model/
+**/rollouts*.jsonl
+**/scored_candidates*.jsonl
+**/score*.txt
+experiments/human_preference/outputs/
+data/StickerConv/test.jsonl
+data/AvaMERG/test.jsonl
+data/AvaMERG/frames/
+
+# Decompressed data
+data/MESC-FT/*.jsonl
+data/MELD-ESC300/test.jsonl
+data/EPITOME-Reddit/*.csv
+nltk_data/
+experiments/api_baselines/reports/
+
+# Local upload archives
+*.zip
+*.sha256
+MANIFEST.sha256

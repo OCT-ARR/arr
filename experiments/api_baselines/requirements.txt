@@ -1,0 +1,8 @@
+requests
+tqdm
+Pillow
+nltk
+rouge-score
+torch
+transformers
+
