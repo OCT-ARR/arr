@@ -29,8 +29,8 @@ submitted manuscript. Shared protocol values are in
 | MELD expert validity audit | [audit summary](human_preference/summarize_meld_audit.py) | Benchmark Construction |
 | Four figures and PDF previews | [figures](../figures/README.md) | Figures 1–4 |
 
-Algorithm-specific optimization defaults are configurable. The shared-trainer
-FIRES-labelled cost control approximates reward computation cost. See the
+Algorithm-specific optimization defaults are configurable. The training-cost
+benchmark uses separate FIRES and FACES entry points with measured step timings. See the
 [optimization guide](optimization_baselines/README.md) and
 [efficiency guide](efficiency/README.md) for the corresponding settings.
 

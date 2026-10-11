@@ -1,12 +1,28 @@
 #!/usr/bin/env python3
-"""Measure wall time and allocated GPU-hours for one controlled training command."""
+"""Measure training-step wall time and allocated GPU-hours for one training command."""
 import argparse
 import json
+import math
 import os
 import subprocess
-import sys
-import time
+import tempfile
 from pathlib import Path
+
+
+def read_step_seconds(path, expected_steps):
+    """Require measured, consecutive steps rather than a declared step count."""
+    rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    if len(rows) != expected_steps:
+        raise ValueError('The timing report must contain exactly the requested training steps')
+    durations = []
+    for expected, row in enumerate(rows, start=1):
+        if type(row.get('step')) is not int or row['step'] != expected:
+            raise ValueError('Timing report steps must be consecutive integers starting at one')
+        duration = row.get('wall_seconds')
+        if type(duration) not in (int, float) or not math.isfinite(duration) or duration <= 0:
+            raise ValueError('Each training-step duration must be finite and positive')
+        durations.append(duration)
+    return math.fsum(durations)
 
 
 def gpu_metadata(gpus):
@@ -32,24 +48,31 @@ def main():
     args = parser.parse_args()
     command = args.command[1:] if args.command[:1] == ['--'] else args.command
     gpu_ids = [x.strip() for x in args.gpus.split(',') if x.strip()]
-    if not command or not gpu_ids or args.stable_steps <= 0:
-        parser.error('A command, at least one GPU, and positive stable_steps are required')
+    if not command or not gpu_ids or len(set(gpu_ids)) != len(gpu_ids) or args.stable_steps <= 0:
+        parser.error('A command, unique GPU identifiers, and positive stable_steps are required')
     env = os.environ.copy()
     env['CUDA_VISIBLE_DEVICES'] = ','.join(gpu_ids)
-    started = time.perf_counter()
-    process = subprocess.Popen(command, cwd=root, env=env)
-    try:
-        return_code = process.wait()
-    except KeyboardInterrupt:
-        process.terminate()
-        process.wait()
-        raise
-    elapsed = time.perf_counter() - started
-    if return_code:
-        raise subprocess.CalledProcessError(return_code, command)
+    with tempfile.TemporaryDirectory(prefix='training_cost_') as temp_dir:
+        timings = Path(temp_dir) / 'steps.jsonl'
+        env['TRAINING_BENCHMARK_TIMINGS_FILE'] = str(timings)
+        env['TRAINING_BENCHMARK_STEPS'] = str(args.stable_steps)
+        process = subprocess.Popen(command, cwd=root, env=env)
+        try:
+            return_code = process.wait()
+        except KeyboardInterrupt:
+            process.terminate()
+            process.wait()
+            raise
+        if return_code:
+            raise SystemExit(f'{args.name}: training command failed (exit {return_code})')
+        try:
+            elapsed = read_step_seconds(timings, args.stable_steps)
+        except (OSError, ValueError, TypeError, AttributeError):
+            parser.error('Missing or invalid training-step timing report; see the efficiency README')
     record = {
         'name': args.name,
         'stable_training_steps': args.stable_steps,
+        'timing_scope': 'training_steps_only',
         'wall_seconds': elapsed,
         'wall_hours': elapsed / 3600.0,
         'allocated_gpu_count': len(gpu_ids),

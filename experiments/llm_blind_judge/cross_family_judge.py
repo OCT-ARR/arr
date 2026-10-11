@@ -99,6 +99,32 @@ def exact_two_sided_sign_test(left_wins: int, right_wins: int) -> float:
     return float(min(1.0, 2.0 * lower_prob))
 
 
+def _aggregate_pairwise_variants(
+    variant_records: Sequence[Dict[str, Any]], left_name: str, right_name: str,
+) -> Tuple[List[str], str]:
+    """Merge the two candidate orders before voting over prompt variants (Table 15)."""
+    votes: List[str] = []
+    for record in variant_records:
+        winner1 = record["round1"]["mapped_winner"]
+        winner2 = record["round2"]["mapped_winner"]
+        if winner1 == winner2:
+            winner = winner1
+        elif winner1 == "TIE":
+            winner = winner2
+        elif winner2 == "TIE":
+            winner = winner1
+        else:
+            winner = "TIE"
+        record["final_variant_winner"] = winner
+        votes.append(winner)
+
+    left_votes, right_votes = votes.count(left_name), votes.count(right_name)
+    winner_name = left_name if left_votes > right_votes else (
+        right_name if right_votes > left_votes else "TIE"
+    )
+    return votes, winner_name
+
+
 class APIPairwiseJudge:
     """Same PAIRWISE_PROMPTS / rules / parsing as the 32B judge, API backend."""
 
@@ -133,17 +159,17 @@ class APIPairwiseJudge:
         right_pred: "base.ModelPrediction",
     ) -> Dict[str, Any]:
         variant_records: List[Dict[str, Any]] = []
-        votes: List[str] = []
+        include_think = bool(left_pred.think.strip() or right_pred.think.strip())
 
         def judge_round(prompt, a_name, a_pred, b_name, b_pred):
-            user_prompt = prompt["user"].format(
+            user_prompt = base.judge_prompt_template(prompt["user"], include_think).format(
                 conversation=sample.conversation,
                 think_a=base.format_think_for_judge(a_pred),
                 response_a=base.format_response_for_judge(a_pred),
                 think_b=base.format_think_for_judge(b_pred),
                 response_b=base.format_response_for_judge(b_pred),
             )
-            user_prompt = base.append_pairwise_judge_rules(user_prompt)
+            user_prompt = base.append_pairwise_judge_rules(user_prompt, include_think=include_think)
             parsed, raw_text = self._judge_once(prompt["system"], user_prompt, sample.image_paths)
             raw_winner = None if parsed is None else parsed.get("winner")
             winner_label = "TIE" if parsed is None else base.parse_winner(raw_winner)
@@ -160,19 +186,10 @@ class APIPairwiseJudge:
             round1 = judge_round(prompt, left_name, left_pred, right_name, right_pred)
             round2 = judge_round(prompt, right_name, right_pred, left_name, left_pred)
             variant_records.append({"round1": round1, "round2": round2})
-            for rd in (round1, round2):
-                votes.append(rd["mapped_winner"])
 
-        left_votes = votes.count(left_name)
-        right_votes = votes.count(right_name)
-        if left_votes > right_votes:
-            winner_name = left_name
-        elif right_votes > left_votes:
-            winner_name = right_name
-        else:
-            winner_name = "TIE"
+        votes, winner_name = _aggregate_pairwise_variants(variant_records, left_name, right_name)
 
-        total_rounds = len(votes)
+        total_rounds = len(variant_records) * 2
         invalid_rounds = sum(
             1 for rec in variant_records for rd in (rec["round1"], rec["round2"]) if not rd["valid"]
         )
@@ -221,6 +238,10 @@ def load_cache(path: Path) -> Dict[int, Dict[str, Any]]:
             if not line:
                 continue
             row = json.loads(line)
+            # Reaggregate cached raw judgments so resumed runs use the same protocol.
+            row["votes"], row["winner_name"] = _aggregate_pairwise_variants(
+                row["variants"], row["left_name"], row["right_name"]
+            )
             out[int(row["sample_id"])] = row
     return out
 
@@ -288,12 +309,14 @@ def main() -> None:
     if args.dry_run:
         sample, lp, rp = samples[0], left_preds[0], right_preds[0]
         prompt = base.PAIRWISE_PROMPTS[0]
+        include_think = bool(lp.think.strip() or rp.think.strip())
         user_prompt = base.append_pairwise_judge_rules(
-            prompt["user"].format(
+            base.judge_prompt_template(prompt["user"], include_think).format(
                 conversation=sample.conversation,
                 think_a=base.format_think_for_judge(lp), response_a=base.format_response_for_judge(lp),
                 think_b=base.format_think_for_judge(rp), response_b=base.format_response_for_judge(rp),
-            )
+            ),
+            include_think=include_think,
         )
         print(f"[DRY] dataset={args.dataset} mode={mode_tag} n_samples={len(samples)} "
               f"n_images_first_sample={len(sample.image_paths)}")
@@ -319,6 +342,8 @@ def main() -> None:
               f"invalid={row['invalid_round_count']} ({time.time() - t0:.1f}s)", flush=True)
 
     records = [cache[s.sample_id] for s in samples]
+    # Persist reaggregated cache entries so the JSONL and summary agree.
+    base.write_jsonl(output_path, records)
     summ = base.summarize_pairwise(records, LEFT_NAME, RIGHT_NAME)
     left_indicator = [1.0 if r["winner_name"] == LEFT_NAME else 0.0 for r in records]
     decisive_indicator = [

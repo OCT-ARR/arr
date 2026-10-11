@@ -371,9 +371,39 @@ def format_response_for_judge(prediction: ModelPrediction) -> str:
     return prediction.response if prediction.response else "(empty response)"
 
 
-def append_pointwise_judge_rules(user_prompt: str, metric: str) -> str:
+def judge_prompt_template(template: str, include_think: bool) -> str:
+    """Remove reasoning fields and criteria before inserting response-only inputs."""
+    if include_think:
+        return template
+    replacements = (
+        (
+            "the model's think section if available, and the final response. If the think "
+            "section is missing, it will be shown as Not provided.",
+            "and the final response.",
+        ),
+        (
+            "the provided think sections if available, and the final responses. "
+            "The model identities are hidden. If a think section is missing, "
+            "it will be shown as Not provided.",
+            "and the final responses. The model identities are hidden.",
+        ),
+        (", available think sections", ""),
+        ("5. coherence between the think section and the final response;\n", ""),
+        ("6. avoidance", "5. avoidance"),
+        ("think-response coherence, ", ""),
+        ("coherence between think content and response, ", ""),
+        ("[MODEL_THINK]\n{think}\n", ""),
+        ("[CANDIDATE A THINK]\n{think_a}\n", ""),
+        ("[CANDIDATE B THINK]\n{think_b}\n", ""),
+    )
+    for original, replacement in replacements:
+        template = template.replace(original, replacement)
+    return template
+
+
+def append_pointwise_judge_rules(user_prompt: str, metric: str, include_think: bool = True) -> str:
     rules = []
-    if metric != "empathy_text":
+    if include_think and metric != "empathy_text":
         rules.append(THINK_MISSING_NOTE)
     rules.extend(
         [
@@ -384,12 +414,13 @@ def append_pointwise_judge_rules(user_prompt: str, metric: str) -> str:
     return f"{user_prompt}\n\n[Evaluation Rules]\n" + "\n".join(rules)
 
 
-def append_pairwise_judge_rules(user_prompt: str) -> str:
+def append_pairwise_judge_rules(user_prompt: str, include_think: bool = True) -> str:
     rules = [
-        THINK_MISSING_NOTE,
         VERBOSITY_PENALTY_RULE,
         f"Return your output EXACTLY as the following JSON format: {PAIRWISE_JSON_EXAMPLE}",
     ]
+    if include_think:
+        rules.insert(0, THINK_MISSING_NOTE)
     return f"{user_prompt}\n\n[Evaluation Rules]\n" + "\n".join(rules)
 
 
@@ -955,6 +986,7 @@ class StickerConvJudge:
         task_name: str,
     ) -> Dict[str, Any]:
         prompts = POINTWISE_PROMPTS[task_name]
+        include_think = bool(prediction.think.strip())
         scores: List[float] = []
         variant_records: List[Dict[str, Any]] = []
         for idx, prompt in enumerate(prompts):
@@ -964,12 +996,12 @@ class StickerConvJudge:
             else:
                 image_paths = sample.image_paths
                 conversation = sample.conversation
-            base_prompt = prompt["user"].format(
+            base_prompt = judge_prompt_template(prompt["user"], include_think).format(
                 conversation=conversation,
                 think=format_think_for_judge(prediction),
                 response=format_response_for_judge(prediction),
             )
-            user_prompt = append_pointwise_judge_rules(base_prompt, task_name)
+            user_prompt = append_pointwise_judge_rules(base_prompt, task_name, include_think=include_think)
             parsed, raw_text = self._judge_once(prompt["system"], user_prompt, image_paths)
             score_value = None if parsed is None else normalize_likert(parsed.get(task_name))
             if score_value is not None:
@@ -1004,6 +1036,7 @@ class StickerConvJudge:
     ) -> Dict[str, Any]:
         votes: List[str] = []
         variant_records: List[Dict[str, Any]] = []
+        include_think = bool(left_pred.think.strip() or right_pred.think.strip())
 
         def judge_round(
             prompt: Dict[str, str],
@@ -1012,14 +1045,14 @@ class StickerConvJudge:
             b_name: str,
             b_pred: ModelPrediction,
         ) -> Dict[str, Any]:
-            base_prompt = prompt["user"].format(
+            base_prompt = judge_prompt_template(prompt["user"], include_think).format(
                 conversation=sample.conversation,
                 think_a=format_think_for_judge(a_pred),
                 response_a=format_response_for_judge(a_pred),
                 think_b=format_think_for_judge(b_pred),
                 response_b=format_response_for_judge(b_pred),
             )
-            user_prompt = append_pairwise_judge_rules(base_prompt)
+            user_prompt = append_pairwise_judge_rules(base_prompt, include_think=include_think)
             parsed, raw_text = self._judge_once(prompt["system"], user_prompt, sample.image_paths)
             raw_winner = None if parsed is None else parsed.get("winner")
             winner_label = "TIE" if parsed is None else parse_winner(raw_winner)

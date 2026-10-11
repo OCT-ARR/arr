@@ -214,6 +214,8 @@ processor files, at `checkpoints/grpo_baseline/`. This is a required input to
 the paired generation commands below. `grpo_baseline` is the code's identifier
 for FIRES; training FACES does not create this checkpoint. The traditional-reward
 ablation uses the common trainer and is not a separate FIRES implementation.
+The [training-cost benchmark](experiments/efficiency/README.md) includes a
+separate FIRES scalar-reward GRPO entry point with measured step timings.
 
 Generate candidates once for each dataset, using greedy decoding, at most
 256 new tokens, and at most eight images. The default devices are `cuda:0`
@@ -267,10 +269,14 @@ computes new local measurements. See [automatic metrics](experiments/automatic_m
 
 ### Qwen pointwise and pairwise judging
 
-Prepare `models/judge-32b/` first. Main comparisons hide reasoning and
-prefix-truncate each response to at most 15 words. Pointwise judging uses
+Prepare `models/judge-32b/` first. Main comparisons remove reasoning fields
+and reasoning-related prompt criteria, and prefix-truncate each response
+to at most 15 words. Pointwise judging uses
 three prompt variants and a 1–5 scale. Pairwise judging adds bidirectional
-candidate swapping and voting. Judges receive no reference situation,
+candidate swapping: combine the two orders within each prompt variant,
+then vote over the three variant decisions, for both Qwen and GLM.
+See the [judge guide](experiments/llm_blind_judge/README.md) for tie rules
+and rerunning caches created with older prompts. Judges receive no reference situation,
 strategy, or response annotations. Win rates include ties; sign tests exclude ties.
 
 ```bash

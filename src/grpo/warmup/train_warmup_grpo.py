@@ -1269,7 +1269,9 @@ def train_one_update_step(
                 ratio * token_advantages.detach(),
                 clipped_ratio * token_advantages.detach(),
             )
-            kl_tokens = pol_logp - ref_logp
+            # GRPO KL: exp(log pi_ref - log pi) - (log pi_ref - log pi) - 1.
+            kl_tokens = ref_logp.float() - pol_logp.float()
+            kl_tokens = torch.expm1(kl_tokens) - kl_tokens
             token_count = token_mask.sum() + 1e-8
             seq_kl = (kl_tokens * token_mask).sum() / token_count
             seq_objective = surrogate - cfg.kl_beta * kl_tokens

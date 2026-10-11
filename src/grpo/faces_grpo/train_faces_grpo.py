@@ -26,6 +26,7 @@ import random
 import re
 import shutil
 import sys
+import time
 import traceback
 import uuid
 import warnings
@@ -1030,7 +1031,7 @@ def build_endpoint_anchored_advantages(
     stats.adv_outcome = float(seg_adv_outcome)
 
     if reward_parts.format < 0.5:
-        token_advantages[gen_start:gen_end] = float(total_advantage)
+        # Invalid formats receive no reward-driven token advantages (Section 3.3).
         stats.coverage = 0.0
         return token_advantages, stats
 
@@ -2794,7 +2795,9 @@ def train_one_update_step(
                 ratio * token_advantages.detach(),
                 clipped_ratio * token_advantages.detach(),
             )
-            kl_tokens = pol_logp - ref_logp
+            # GRPO KL: exp(log pi_ref - log pi) - (log pi_ref - log pi) - 1.
+            kl_tokens = ref_logp.float() - pol_logp.float()
+            kl_tokens = torch.expm1(kl_tokens) - kl_tokens
             token_count = token_mask.sum() + 1e-8
             seq_kl = (kl_tokens * token_mask).sum() / token_count
             seq_objective = surrogate - cfg.kl_beta * kl_tokens
@@ -3140,6 +3143,8 @@ def main() -> None:
         )
         return ckpt
 
+    benchmark_timings = os.environ.get("TRAINING_BENCHMARK_TIMINGS_FILE")
+
     try:
         while True:
             next_item = cursor.next_batch()
@@ -3147,6 +3152,10 @@ def main() -> None:
                 break
 
             epoch_idx, batch_indices = next_item
+            if benchmark_timings:
+                for device_index in range(torch.cuda.device_count()):
+                    torch.cuda.synchronize(device_index)
+                step_started = time.perf_counter()
             step_metrics = train_one_update_step(
                 policy_model=policy_model,
                 processor=processor,
@@ -3157,7 +3166,15 @@ def main() -> None:
                 scheduler=scheduler,
                 cfg=cfg,
             )
+            if benchmark_timings and int(step_metrics["optimizer_updates"]) != max(1, cfg.grpo_updates_per_rollout):
+                raise RuntimeError("Training-cost benchmark requires every scheduled policy update to complete")
             global_step += 1
+            if benchmark_timings:
+                for device_index in range(torch.cuda.device_count()):
+                    torch.cuda.synchronize(device_index)
+                step_seconds = time.perf_counter() - step_started
+                with open(benchmark_timings, "a", encoding="utf-8") as timing_file:
+                    timing_file.write(json.dumps({"step": global_step, "wall_seconds": step_seconds}) + "\n")
 
             if global_step % cfg.log_every == 0:
                 print(_train_step_log_line(global_step, epoch_idx, step_metrics))

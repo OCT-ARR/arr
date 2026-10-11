@@ -83,9 +83,21 @@ summaries stay in ignored output folders.
 Post-hoc judges receive no reference annotations. Main pointwise/pairwise
 views remove both reasoning fields and reasoning-related criteria. Each
 response is independently prefix-capped; this is not forced equal length.
+The shared prompt builder also omits the missing-think note in these views.
+For both Qwen and GLM, the two candidate orders are first combined within
+each prompt variant: agreement is retained, one Tie yields the other decision,
+and conflicting non-tie decisions yield Tie. The three variant decisions are
+then counted, with equal model vote counts yielding Tie (paper Table 15).
 Win rates include ties in the denominator and sign tests exclude them.
 Invalid/unparsable judge output is treated as Tie. Human–Qwen
 agreement is analyzed with the tools in `experiments/human_preference/`.
+
+After updating the controlled prompts, use a fresh `--output_root` for
+pointwise, Qwen pairwise, and GLM pairwise evaluations. Cached judgments made
+with think-related fields or criteria require reevaluation; reaggregating
+their votes alone does not apply the corrected prompts. GLM otherwise
+reaggregates cached raw order judgments using the same three-variant rule
+and saves matching JSONL decisions and summary statistics.
 
 Dataset aliases: `meld` and `emotyda` refer to MELD-ESC300 in the controlled
 registry; the metric/API registry calls the same split `meld_esc300`.
